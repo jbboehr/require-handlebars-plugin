@@ -11,11 +11,11 @@
 define: false, process: false, window: false */
 define([
 //>>excludeStart('excludeHbs', pragmas.excludeHbs)
-  'hbs/handlebars', 'hbs/underscore', 'hbs/i18nprecompile', 'hbs/json2'
+  'handlebars', 'underscore', 'json2', 'hbs/i18nprecompile'
 //>>excludeEnd('excludeHbs')
 ], function (
 //>>excludeStart('excludeHbs', pragmas.excludeHbs)
-  Handlebars, _, precompile, JSON
+  Handlebars, _, JSON, precompile
 //>>excludeEnd('excludeHbs')
 ) {
   //>>excludeStart('excludeHbs', pragmas.excludeHbs)
@@ -585,7 +585,7 @@ define([
             partialReferences = require.config.hbs._partials[name].references;
 
           text = '/* START_TEMPLATE */\n' +
-                 'define('+tmplName+"['hbs','hbs/handlebars'"+depStr+helpDepStr+'], function( hbs, Handlebars ){ \n' +
+                 'define('+tmplName+"['hbs','handlebars'"+depStr+helpDepStr+'], function( hbs, Handlebars ){ \n' +
                    'var t = Handlebars.template(' + prec + ');\n' +
                    "Handlebars.registerPartial('" + name + "', t);\n";
 

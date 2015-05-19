@@ -1,0 +1,10 @@
+{
+    "dependencies": {
+        "handlebars": "~2.0.0",
+        "json2": "*",
+        "underscore": "~1.8.3"
+    },
+    "name": "require-handlebars-plugin",
+    "private": false
+}
+
