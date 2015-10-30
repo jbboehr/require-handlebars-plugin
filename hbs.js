@@ -11,14 +11,33 @@
 define: false, process: false, window: false */
 define([
 //>>excludeStart('excludeHbs', pragmas.excludeHbs)
-  'handlebars', 'underscore', 'json2', 'hbs/i18nprecompile'
+  'handlebars', 'underscore', 'json2'
 //>>excludeEnd('excludeHbs')
 ], function (
 //>>excludeStart('excludeHbs', pragmas.excludeHbs)
-  Handlebars, _, JSON, precompile
+  Handlebars, _, JSON
 //>>excludeEnd('excludeHbs')
 ) {
   //>>excludeStart('excludeHbs', pragmas.excludeHbs)
+  function precompile(string, _unused, options) {
+    var ast, environment;
+
+    options = options || {};
+
+    if (!('data' in options)) {
+      options.data = true;
+    }
+
+    if (options.compat) {
+      options.useDepths = true;
+    }
+
+    ast = Handlebars.parse(string);
+
+    environment = new Handlebars.Compiler().compile(ast, options);
+    return new Handlebars.JavaScriptCompiler().compile(environment, options);
+  }
+
   var fs;
   var getXhr;
   var progIds = ['Msxml2.XMLHTTP', 'Microsoft.XMLHTTP', 'Msxml2.XMLHTTP.4.0'];
@@ -32,7 +51,6 @@ define([
   var devStyleDirectory = '/styles/';
   var buildStyleDirectory = '/demo-build/styles/';
   var helperDirectory = 'templates/helpers/';
-  var i18nDirectory = 'templates/i18n/';
   var buildCSSFileName = 'screen.build.css';
   var onHbsReadMethod = "onHbsRead";
 
@@ -192,7 +210,7 @@ define([
       }
     },
 
-    version: '2.0.0',
+    version: '3.0.3',
 
     load: function (name, parentRequire, load, _config) {
       //>>excludeStart('excludeHbs', pragmas.excludeHbs)
@@ -200,7 +218,6 @@ define([
 
       var compiledName = name + customNameExtension;
       config.hbs = config.hbs || {};
-      var disableI18n = !(config.hbs.i18n == true); // by default we disable i18n unless config.hbs.i18n is true
       var disableHelpers = (config.hbs.helpers == false); // be default we enable helpers unless config.hbs.helpers is false
       var partialsUrl = '';
       if(config.hbs.partialsUrl) {
@@ -217,36 +234,46 @@ define([
 
       function recursiveNodeSearch( statements, res ) {
         _(statements).forEach(function ( statement ) {
-          if ( statement && statement.type && statement.type === 'partial' ) {
-            res.push(statement.partialName.name);
+          if ( statement && statement.type && statement.type === 'PartialStatement' ) {
+          //Don't register dynamic partials as undefined
+            if(statement.name.type !== "SubExpression"){
+              res.push(statement.name.original);
+            }
           }
-          if ( statement && statement.program && statement.program.statements ) {
-            recursiveNodeSearch( statement.program.statements, res );
+          if ( statement && statement.program && statement.program.body ) {
+            recursiveNodeSearch( statement.program.body, res );
           }
-          if ( statement && statement.inverse && statement.inverse.statements ) {
-            recursiveNodeSearch( statement.inverse.statements, res );
+          if ( statement && statement.inverse && statement.inverse.body ) {
+            recursiveNodeSearch( statement.inverse.body, res );
           }
         });
         return res;
       }
 
       // TODO :: use the parser to do this!
-      function findPartialDeps( nodes ) {
-        var res = [];
-        if ( nodes && nodes.statements ) {
-          res = recursiveNodeSearch( nodes.statements, [] );
-        }
+      function findPartialDeps( nodes , metaObj) {
+      var res = [];
+      if ( nodes && nodes.body ) {
+        res = recursiveNodeSearch( nodes.body, [] );
+      }
+
+      if(metaObj && metaObj.partials && metaObj.partials.length){
+        _(metaObj.partials).forEach(function ( partial ) {
+          res.push(partial);
+        });
+      }
+
         return _.unique(res);
       }
 
       // See if the first item is a comment that's json
       function getMetaData( nodes ) {
         var statement, res, test;
-        if ( nodes && nodes.statements ) {
-          statement = nodes.statements[0];
-          if ( statement && statement.type === 'comment' ) {
+        if ( nodes && nodes.body ) {
+          statement = nodes.body[0];
+          if ( statement && statement.type === 'CommentStatement' ) {
             try {
-              res = ( statement.comment ).replace(new RegExp('^[\\s]+|[\\s]+$', 'g'), '');
+              res = ( statement.value ).replace(new RegExp('^[\\s]+|[\\s]+$', 'g'), '');
               test = JSON.parse(res);
               return res;
             }
@@ -277,6 +304,38 @@ define([
         return res;
       }
 
+      //Taken from Handlebar.AST.helpers.helperExpression with slight modification
+      function isHelper(statement){
+        return !!(statement.type === 'SubExpression' || (statement.params && statement.params.length) || statement.hash);
+      }
+
+      function checkStatementForHelpers(statement, helpersres){
+
+        if(isHelper(statement)){
+          if(typeof statement.path !== 'undefined'){
+            registerHelper(statement.path.original,helpersres);
+          }
+        }
+
+        if(statement && statement.params){
+          statement.params.forEach(function (param) {
+            checkStatementForHelpers(param, helpersres);
+          });
+        }
+
+        if(statement && statement.hash && statement.hash.pairs){
+          _(statement.hash.pairs).forEach(function(pair) {
+            checkStatementForHelpers(pair.value, helpersres);
+          });
+        }
+      }
+
+      function registerHelper(helperName,helpersres){
+        if(typeof Handlebars.helpers[helperName] === 'undefined'){
+          helpersres.push(helperName);
+        }
+      }
+
       function recursiveVarSearch( statements, res, prefix, helpersres ) {
         prefix = prefix ? prefix + '.' : '';
 
@@ -289,97 +348,23 @@ define([
           var part;
           var sideways;
 
-          // if it's a mustache block
-          if ( statement && statement.type && statement.type === 'mustache' ) {
-
-            // If it has params, the first part is a helper or something
-            if ( !statement.params || ! statement.params.length ) {
-              parts = composeParts( statement.id.parts );
-              for( part in parts ) {
-                if ( parts[ part ] ) {
-                  newprefix = parts[ part ] || newprefix;
-                  res.push( prefix + parts[ part ] );
-                }
-              }
-              res.push(prefix + statement.id.string);
-            }
-
-            var paramsWithoutParts = ['this', '.', '..', './..', '../..', '../../..'];
-
-            // grab the params
-            if ( statement.params && typeof Handlebars.helpers[statement.id.string] === 'undefined') {
-              _(statement.params).forEach(function(param) {
-                if ( _(paramsWithoutParts).contains(param.original)
-                  || param instanceof Handlebars.AST.StringNode
-                  || param instanceof Handlebars.AST.NumberNode
-                  || param instanceof Handlebars.AST.BooleanNode
-                  || param instanceof Handlebars.AST.DataNode
-                  || param instanceof Handlebars.AST.SexprNode
-                ) {
-                  helpersres.push(statement.id.string);
-
-                  // Look into the params to find subexpressions
-                  if (typeof statement.params !== 'undefined') {
-                      _(statement.params).forEach(function(param) {
-                        if (param.type === 'sexpr' && param.isHelper === true) {
-                          // Found subexpression in params
-                          helpersres.push(param.id.string);
-                        }
-                      });
-                  }
-
-                  // Look in the hash to find sub expressions
-                  if ((statement.hash != null) && (typeof statement.hash !== 'undefined') && (typeof statement.hash.pairs !== 'undefined')) {
-                    _(statement.hash.pairs).forEach(function(pair) {
-                      var pairName = pair[0],
-                          pairValue = pair[1];
-                      if (pairValue.type === 'sexpr' && pairValue.isHelper === true) {
-                        // Found subexpression in hash params
-                        helpersres.push(pairValue.id.string);
-                      }
-                    });
-                  }
-                }
-
-                parts = composeParts( param.parts );
-
-                for(var part in parts ) {
-                  if ( parts[ part ] ) {
-                    newprefix = parts[part] || newprefix;
-                    helpersres.push(statement.id.string);
-                    res.push( prefix + parts[ part ] );
-                  }
-                }
-              });
-              if ((statement.hash != null) && (typeof statement.hash !== 'undefined') && (typeof statement.hash.pairs !== 'undefined')) {
-                //Even if it has no regular params, it may be a helper with hash params
-                _(statement.hash.pairs).forEach(function(pair) {
-                  var pairValue = pair[1];
-                  if (pairValue instanceof Handlebars.AST.StringNode
-                    || pairValue instanceof Handlebars.AST.NumberNode
-                    || pairValue instanceof Handlebars.AST.BooleanNode
-                    || pairValue instanceof Handlebars.AST.IdNode
-                    //TODO: Add support for subexpressions here?
-                  ) {
-                    helpersres.push(statement.id.string);
-                  }
-                });
-              }
-            }
+          //Its a helper or a mustache statement
+          if (isHelper(statement) || statement.type === 'MustacheStatement') {
+            checkStatementForHelpers(statement, helpersres);
           }
 
-          // If it's a meta block
+          // If it's a meta block, not sure what this is. It should probably never happen
           if ( statement && statement.mustache  ) {
             recursiveVarSearch( [statement.mustache], res, prefix + newprefix, helpersres );
           }
 
           // if it's a whole new program
-          if ( statement && statement.program && statement.program.statements ) {
-            sideways = recursiveVarSearch([statement.mustache],[], '', helpersres)[0] || '';
-            if ( statement.inverse && statement.inverse.statements ) {
-              recursiveVarSearch( statement.inverse.statements, res, prefix + newprefix + (sideways ? (prefix+newprefix) ? '.'+sideways : sideways : ''), helpersres);
+          if ( statement && statement.program && statement.program.body ) {
+            sideways = recursiveVarSearch([statement.path],[], '', helpersres)[0] || '';
+            if ( statement.inverse && statement.inverse.body ) {
+             recursiveVarSearch( statement.inverse.body, res, prefix + newprefix + (sideways ? (prefix+newprefix) ? '.'+sideways : sideways : ''), helpersres);
             }
-            recursiveVarSearch( statement.program.statements, res, prefix + newprefix + (sideways ? (prefix+newprefix) ? '.'+sideways : sideways : ''), helpersres);
+            recursiveVarSearch( statement.program.body, res, prefix + newprefix + (sideways ? (prefix+newprefix) ? '.'+sideways : sideways : ''), helpersres);
           }
         });
         return res;
@@ -390,8 +375,8 @@ define([
         var res   = [];
         var helpersres = [];
 
-        if ( nodes && nodes.statements ) {
-          res = recursiveVarSearch( nodes.statements, [], undefined, helpersres );
+        if ( nodes && nodes.body ) {
+          res = recursiveVarSearch( nodes.body, [], undefined, helpersres );
         }
 
         var defaultHelpers = [
@@ -444,7 +429,6 @@ define([
           var readCallback = (config.isBuild && config[onHbsReadMethod]) ? config[onHbsReadMethod]:  function(name,path,text){return text} ;
           // for some reason it doesn't include hbs _first_ when i don't add it here...
           var nodes = Handlebars.parse( readCallback(name, path, text));
-          var partials = findPartialDeps( nodes );
           var meta = getMetaData( nodes );
           var extDeps = getExternalDeps( nodes );
           var vars = extDeps.vars;
@@ -456,9 +440,6 @@ define([
           var depStr, helpDepStr, metaObj, head, linkElem;
           var baseDir = name.substr(0,name.lastIndexOf('/')+1);
 
-          require.config.hbs = require.config.hbs || {};
-          require.config.hbs._partials = require.config.hbs._partials || {};
-
           if(meta !== '{}') {
             try {
               metaObj = JSON.parse(meta);
@@ -466,30 +447,44 @@ define([
               console.log('couldn\'t parse meta for %s', path);
             }
           }
+          var partials = findPartialDeps( nodes,metaObj );
+          config.hbs = config.hbs || {};
+          config.hbs._partials = config.hbs._partials || {};
 
           for ( var i in partials ) {
             if ( partials.hasOwnProperty(i) && typeof partials[i] === 'string') {  // make sure string, because we're iterating over all props
               var partialReference = partials[i];
 
-              var path;
+              var partialPath;
               if(partialReference.match(/^(\.|\/)+/)) {
                 // relative path
-                path = cleanPath(baseDir + partialReference)
+                partialPath = cleanPath(baseDir + partialReference);
               }
               else {
                 // absolute path relative to config.hbs.partialsUrl if defined
-                path = cleanPath(partialsUrl + partialReference);
+                partialPath = cleanPath(partialsUrl + partialReference);
               }
 
-              require.config.hbs._partials[path] = require.config.hbs._partials[path] || [];
+              // check for recursive partials
+              if (omitExtension) {
+                if(path === parentRequire.toUrl(partialPath)) {
+                  continue;
+                }
+              } else {
+                if(path === parentRequire.toUrl(partialPath +'.'+ (config.hbs && config.hbs.templateExtension ? config.hbs.templateExtension : templateExtension))) {
+                  continue;
+                }
+              }
+
+              config.hbs._partials[partialPath] = config.hbs._partials[partialPath] || [];
 
               // we can reference a same template with different paths (with absolute or relative)
-              require.config.hbs._partials[path].references = require.config.hbs._partials[path].references || [];
-              require.config.hbs._partials[path].references.push(partialReference);
+              config.hbs._partials[partialPath].references = config.hbs._partials[partialPath].references || [];
+              config.hbs._partials[partialPath].references.push(partialReference);
 
-              require.config.hbs._loadedDeps = require.config.hbs._loadedDeps || {};
+              config.hbs._loadedDeps = config.hbs._loadedDeps || {};
 
-              deps[i] = "hbs!"+path;
+              deps[i] = "hbs!"+partialPath;
             }
           }
 
@@ -572,7 +567,7 @@ define([
                               't.vars = ' + JSON.stringify(vars) + ';\n';
           }
 
-          var mapping = disableI18n? false : _.extend( langMap, config.localeMapping );
+          var mapping = false;
           var configHbs = config.hbs || {};
           var options = _.extend(configHbs.compileOptions || {}, { originalKeyFallback: configHbs.originalKeyFallback });
           var prec = precompile( text, mapping, options);
@@ -581,11 +576,13 @@ define([
           if(depStr) depStr = ", '"+depStr+"'";
 
           var partialReferences = [];
-          if(require.config.hbs._partials[name])
-            partialReferences = require.config.hbs._partials[name].references;
+          if(config.hbs._partials[name])
+            partialReferences = config.hbs._partials[name].references;
+
+          var handlebarsPath = (config.hbs && config.hbs.handlebarsPath) ? config.hbs.handlebarsPath : 'handlebars';
 
           text = '/* START_TEMPLATE */\n' +
-                 'define('+tmplName+"['hbs','handlebars'"+depStr+helpDepStr+'], function( hbs, Handlebars ){ \n' +
+                 'define('+tmplName+"['hbs','"+handlebarsPath+"'"+depStr+helpDepStr+'], function( hbs, Handlebars ){ \n' +
                    'var t = Handlebars.template(' + prec + ');\n' +
                    "Handlebars.registerPartial('" + name + "', t);\n";
 
@@ -611,7 +608,7 @@ define([
           /*@end@*/
 
           if ( !config.isBuild ) {
-            require( deps, function (){
+            parentRequire( deps, function (){
               load.fromText(text);
 
               //Give result to load. Need to wait until the module
@@ -650,30 +647,7 @@ define([
         path = parentRequire.toUrl(name +'.'+ (config.hbs && config.hbs.templateExtension ? config.hbs.templateExtension : templateExtension));
       }
 
-      if (disableI18n){
-        fetchAndRegister(false);
-      }
-      else {
-        // Workaround until jam is able to pass config info or we move i18n to a separate module.
-        // This logs a warning and disables i18n if there's an error loading the language file
-        var langMapPath = (config.hbs && config.hbs.i18nDirectory ? config.hbs.i18nDirectory : i18nDirectory) + (config.locale || 'en_us') + '.json';
-        try {
-          fetchOrGetCached(parentRequire.toUrl(langMapPath), function (langMap) {
-            fetchAndRegister(JSON.parse(langMap));
-          });
-        }
-        catch(er) {
-          // if there's no configuration at all, log a warning and disable i18n for this and subsequent templates
-          if(!config.hbs) {
-            console.warn('hbs: Error reading ' + langMapPath + ', disabling i18n. Ignore this if you\'re using jam, otherwise check your i18n configuration.\n');
-            config.hbs = {i18n: false, helpers: true};
-            fetchAndRegister(false);
-          }
-          else {
-            throw er;
-          }
-        }
-      }
+      fetchAndRegister(false);
       //>>excludeEnd('excludeHbs')
     },
 
