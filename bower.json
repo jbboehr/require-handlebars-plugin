@@ -1,6 +1,6 @@
 {
     "dependencies": {
-        "handlebars": "~2.0.0",
+        "handlebars": "~4.0.0",
         "json2": "*",
         "underscore": "~1.8.3"
     },
