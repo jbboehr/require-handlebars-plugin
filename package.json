@@ -1,26 +1,17 @@
 {
   "name": "require-handlebars-plugin",
   "version": "2.0.0",
-  "author": "Alex Sexton <alexsexton@gmail.com>",
+  "author": "John Boehr <jbboehr@gmail.com>",
+  "contributors": [
+    "Alex Sexton <alexsexton@gmail.com>"
+  ],
   "description": "A plugin for handlebars in require.js",
   "repository": {
     "type": "git",
-    "url": "https://SlexAxton@github.com/SlexAxton/require-handlebars-plugin.git"
+    "url": "https://SlexAxton@github.com/jbboehr/require-handlebars-plugin.git"
   },
   "license": "MIT",
   "main": "hbs",
-  "volo": {
-    "type": "directory",
-    "dependencies": {
-      "Handlebars": "https://raw.github.com/SlexAxton/require-handlebars-plugin/master/Handlebars.js"
-    }
-  },
-  "jam": {
-    "name": "hbs",
-    "dependencies": {
-      "Handlebars": null
-    }
-  },
   "scripts": {
     "pretest": "[ ! -d bower_components ] && node_modules/.bin/bower install --dev || true",
     "test": "node_modules/.bin/karma start --single-run --browsers PhantomJS"

@@ -3,10 +3,11 @@
   "description": "A plugin for handlebars in require.js",
   "main": "hbs",
   "authors": [
+    "John Boehr <jbboehr@gmail.com>",
     "Xavier Damman <xdamman@gmail.com>"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/SlexAxton/require-handlebars-plugin",
+  "homepage": "https://github.com/jbboehr/require-handlebars-plugin",
   "moduleType": [
     "amd"
   ],
