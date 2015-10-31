@@ -17,15 +17,25 @@
         // removes handlebars and json2
         excludeAfterBuild: true
     },
-    exclude: ["handlebars"],
-    include: ["handlebars.runtime"],
+    //exclude: ["handlebars"],
+    //include: ["handlebars.runtime"],
 
     paths: {
-      "hbs": "../hbs"
+      "hbs": "../hbs",
+      'handlebars': '../bower_components/handlebars/handlebars',
+      'handlebars.runtime': '../bower_components/handlebars/handlebars.runtime',
+      'json2': '../bower_components/json2/json2',
+      'underscore': '../bower_components/underscore/underscore'
       // if your project is already using underscore.js and you want to keep
       // the hbs plugin even after build (excludeHbs:false) you should set the
       // "hbs/underscore" path to point to the shared location like
       // "hbs/underscore" : "lib/underscore" to avoid loading it twice
+    },
+    
+    shim: {
+        'json2': {
+            exports: 'JSON'
+        }
     },
 
     locale: "en_ca",

@@ -1,3 +1,8 @@
+
+if( typeof window === 'undefined' ) {
+  window = global;
+}
+
 // Require our template with the handlebars plugin
 define(['hbs!template/one'], function (tmplOne) {
   // Find our container

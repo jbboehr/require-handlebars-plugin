@@ -22,9 +22,15 @@ requirejs.config({
     },
     
     paths: {
-      'handlebars': 'node_modules/handlebars/dist/handlebars.amd',
-      'json2': 'node_modules/JSON2/json2',
-      'underscore': 'node_modules/underscore/underscore'
+      'handlebars': 'bower_components/handlebars/handlebars',
+      'json2': 'bower_components/json2/json2',
+      'underscore': 'bower_components/underscore/underscore'
+    },
+    
+    shim: {
+      'json2': {
+        exports: 'JSON'
+      }
     },
 
     // start test run, once Require.js is done

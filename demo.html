@@ -18,11 +18,25 @@
   // I change the path as to not duplicate the hbs.js and handlebars plugin.
   // Normally, just drop it in the same place as require.js and it'll work fine.
   // Essentially just ignore this.
-  paths  : {
-    'hbs' : '../hbs'
-  }
+  paths: {
+    "hbs": "../hbs",
+    'handlebars': '../bower_components/handlebars/handlebars',
+    'handlebars.runtime': '../bower_components/handlebars/handlebars.runtime',
+    'json2': '../bower_components/json2/json2',
+    'underscore': '../bower_components/underscore/underscore'
+    // if your project is already using underscore.js and you want to keep
+    // the hbs plugin even after build (excludeHbs:false) you should set the
+    // "hbs/underscore" path to point to the shared location like
+    // "hbs/underscore" : "lib/underscore" to avoid loading it twice
+  },
+  
+  shim: {
+      'json2': {
+          exports: 'JSON'
+      }
+  },
 };</script>
 <!-- use a common require.js and app injection method. -->
-<script src="demo/require.js" data-main="demo/main.js"></script>
+<script src="node_modules/requirejs/require.js" data-main="demo/main.js"></script>
 </body>
 </html>

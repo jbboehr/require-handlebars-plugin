@@ -1,0 +1,25 @@
+{
+  "name": "require-handlebars-plugin",
+  "description": "A plugin for handlebars in require.js",
+  "main": "hbs",
+  "authors": [
+    "Xavier Damman <xdamman@gmail.com>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/SlexAxton/require-handlebars-plugin",
+  "moduleType": [
+    "amd"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "json2": "*",
+    "underscore": ">=1.3",
+    "handlebars": ">=3.0.0"
+  }
+}
