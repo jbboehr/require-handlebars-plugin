@@ -22,6 +22,7 @@ requirejs.config({
     },
     
     paths: {
+      'handlebars': 'node_modules/handlebars/dist/handlebars.amd',
       'json2': 'node_modules/JSON2/json2',
       'underscore': 'node_modules/underscore/underscore'
     },
