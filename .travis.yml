@@ -12,7 +12,8 @@ addons:
     - g++-4.8
 
 install:
-  - export CC=gcc-4.8
+  - export CC=/usr/bin/gcc-4.8
+  - export CXX=/usr/bin/g++-4.8
   - travis_retry npm install -d
   - travis_retry ./node_modules/.bin/bower install
 
