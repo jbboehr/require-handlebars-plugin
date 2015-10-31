@@ -11,7 +11,7 @@
 define: false, process: false, window: false */
 define([
 //>>excludeStart('excludeHbs', pragmas.excludeHbs)
-  'hbs/handlebars', 'hbs/underscore', 'hbs/json2'
+  'hbs/handlebars', 'underscore', 'json2'
 //>>excludeEnd('excludeHbs')
 ], function (
 //>>excludeStart('excludeHbs', pragmas.excludeHbs)

@@ -20,6 +20,11 @@ requirejs.config({
         return '/base/tests/templates/helpers/' + name + '.js';
       }
     },
+    
+    paths: {
+      'json2': 'node_modules/JSON2/json2',
+      'underscore': 'node_modules/underscore/underscore'
+    },
 
     // start test run, once Require.js is done
     callback: window.__karma__.start

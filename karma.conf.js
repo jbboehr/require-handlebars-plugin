@@ -16,6 +16,8 @@ module.exports = function(config) {
     files: [
       'tests/test-main.js',
       'requirejs.conf.js',
+      'node_modules/JSON2/json2.js',
+      'node_modules/underscore/underscore.js',
       {pattern: 'hbs.js', included: false},
       {pattern: 'hbs/*.js', included: false},
       {pattern: 'tests/*.js', included: false},
