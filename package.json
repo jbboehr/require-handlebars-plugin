@@ -29,6 +29,7 @@
     "Xavier Damman <xdamman@gmail.com>"
   ],
   "devDependencies": {
+    "bower": "~1.6.5",
     "handlebars": "~4.0.2",
     "karma": "~0.13.9",
     "karma-cajon": "0.0.1",
