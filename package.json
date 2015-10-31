@@ -1,6 +1,6 @@
 {
   "name": "require-handlebars-plugin",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "author": "John Boehr <jbboehr@gmail.com>",
   "contributors": [
     "Alex Sexton <alexsexton@gmail.com>"
@@ -21,7 +21,7 @@
   ],
   "devDependencies": {
     "bower": "~1.6.5",
-    "handlebars": "~4.0.2",
+    "handlebars": "~4.0.4",
     "karma": "~0.13.9",
     "karma-cajon": "0.0.1",
     "karma-chai": "~0.1.0",
