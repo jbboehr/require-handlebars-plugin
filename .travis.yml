@@ -1,0 +1,20 @@
+language: node_js
+
+node_js:
+  - 4.1
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-4.8
+    - g++-4.8
+
+install:
+  - export CC=/usr/bin/gcc-4.8
+  - export CXX=/usr/bin/g++-4.8
+  - travis_retry npm install
+  - travis_retry ./node_modules/.bin/bower install
+
+test: npm test
