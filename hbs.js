@@ -420,9 +420,9 @@ define([
             delete tokens[i];
           }
         }
-        return tokens.join('/').replace(/:?\/\/+/g, function($0) {
-          return $0.charAt(0) === ':' ? $0 : '/';
-        });
+        return tokens.filter(function(n){
+          return n != undefined;
+        }).join('/');
       }
 
       function addExtension(name, omitExtension) {
@@ -467,7 +467,10 @@ define([
               var partialReference = partials[i];
 
               var partialPath;
-              if(partialReference.match(/^(\.|\/)+/)) {
+              if( typeof config.hbs.partialPathCallback === 'function' ) {
+                var ctx = {cleanPath: cleanPath, baseDir: baseDir, partialsUrl: partialsUrl};
+                partialPath = config.hbs.partialPathCallback.call(ctx, partialReference);
+              } else if(partialReference.match(/^(\.|\/)+/)) {
                 // relative path
                 partialPath = cleanPath(baseDir + partialReference);
               } else {
