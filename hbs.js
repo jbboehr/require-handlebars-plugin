@@ -420,7 +420,18 @@ define([
             delete tokens[i];
           }
         }
-        return tokens.join('/').replace(/\/\/+/g,'/');
+        return tokens.join('/').replace(/:?\/\/+/g, function($0) {
+          return $0.charAt(0) === ':' ? $0 : '/';
+        });
+      }
+
+      function addExtension(name, omitExtension) {
+        var ext = '.' + (config.hbs && config.hbs.templateExtension ? config.hbs.templateExtension : templateExtension);
+        if( name.substr(-ext.length) === ext || omitExtension ) {
+          return name;
+        } else {
+          return name + ext;
+        }
       }
 
       function fetchAndRegister(langMap) {
@@ -459,21 +470,14 @@ define([
               if(partialReference.match(/^(\.|\/)+/)) {
                 // relative path
                 partialPath = cleanPath(baseDir + partialReference);
-              }
-              else {
+              } else {
                 // absolute path relative to config.hbs.partialsUrl if defined
                 partialPath = cleanPath(partialsUrl + partialReference);
               }
 
               // check for recursive partials
-              if (omitExtension) {
-                if(path === parentRequire.toUrl(partialPath)) {
-                  continue;
-                }
-              } else {
-                if(path === parentRequire.toUrl(partialPath +'.'+ (config.hbs && config.hbs.templateExtension ? config.hbs.templateExtension : templateExtension))) {
-                  continue;
-                }
+              if(path === parentRequire.toUrl(addExtension(partialPath, omitExtension))) {
+                continue;
               }
 
               config.hbs._partials[partialPath] = config.hbs._partials[partialPath] || [];
@@ -638,15 +642,8 @@ define([
         });
       }
 
-      var path;
       var omitExtension = config.hbs && config.hbs.templateExtension === false;
-
-      if (omitExtension) {
-        path = parentRequire.toUrl(name);
-      }
-      else {
-        path = parentRequire.toUrl(name +'.'+ (config.hbs && config.hbs.templateExtension ? config.hbs.templateExtension : templateExtension));
-      }
+      var path = parentRequire.toUrl(addExtension(name, omitExtension));
 
       fetchAndRegister(false);
       //>>excludeEnd('excludeHbs')
@@ -664,3 +661,4 @@ define([
   };
 });
 /* END_hbs_PLUGIN */
+
