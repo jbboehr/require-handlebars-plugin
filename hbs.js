@@ -434,6 +434,14 @@ define([
         }
       }
 
+      function cleanPartialName(name) {
+        if( typeof config.hbs.partialNameCallback === 'function' ) {
+          return config.hbs.partialNameCallback.call(null, name);
+        } else {
+          return name;
+        }
+      }
+
       function fetchAndRegister(langMap) {
           fetchText(path, function(text, path) {
 
@@ -483,11 +491,17 @@ define([
                 continue;
               }
 
-              config.hbs._partials[partialPath] = config.hbs._partials[partialPath] || [];
+              var partialName = cleanPartialName(partialPath);
+              config.hbs._partials[partialName] = config.hbs._partials[partialPath] || [];
 
               // we can reference a same template with different paths (with absolute or relative)
-              config.hbs._partials[partialPath].references = config.hbs._partials[partialPath].references || [];
-              config.hbs._partials[partialPath].references.push(partialReference);
+              var references = config.hbs._partials[partialName].references = config.hbs._partials[partialName].references || [];
+              if( references.indexOf(partialReference) === -1 ) {
+                config.hbs._partials[partialName].references.push(partialReference);
+              }
+              if( references.indexOf(partialName) === -1 ) {
+                config.hbs._partials[partialName].references.push(partialName);
+              }
 
               config.hbs._loadedDeps = config.hbs._loadedDeps || {};
 
@@ -580,19 +594,21 @@ define([
           var options = _.extend(configHbs.compileOptions || {}, { originalKeyFallback: configHbs.originalKeyFallback });
           var prec = precompile( text, mapping, options);
           var tmplName = "'hbs!" + name + "',";
+          var cleanName = cleanPartialName(name);
 
           if(depStr) depStr = ", '"+depStr+"'";
 
           var partialReferences = [];
-          if(config.hbs._partials[name])
-            partialReferences = config.hbs._partials[name].references;
+          if(config.hbs._partials[cleanName]) {
+            partialReferences = config.hbs._partials[cleanName].references;
+          }
 
           var handlebarsPath = (config.hbs && config.hbs.handlebarsPath) ? config.hbs.handlebarsPath : 'handlebars';
 
           text = '/* START_TEMPLATE */\n' +
                  'define('+tmplName+"['hbs','"+handlebarsPath+"'"+depStr+helpDepStr+'], function( hbs, Handlebars ){ \n' +
                    'var t = Handlebars.template(' + prec + ');\n' +
-                   "Handlebars.registerPartial('" + name + "', t);\n";
+                   "Handlebars.registerPartial('" + cleanName + "', t);\n";
 
           for(var i=0; i<partialReferences.length;i++)
             text += "Handlebars.registerPartial('" + partialReferences[i] + "', t);\n";
@@ -601,6 +617,7 @@ define([
                    'return t;\n' +
                  '});\n' +
                  '/* END_TEMPLATE */\n';
+
 
           //Hold on to the transformed text if a build.
           if (config.isBuild) {
